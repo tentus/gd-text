@@ -135,11 +135,11 @@ class Box
         $yAllowed = array('top', 'bottom', 'center');
 
         if (!in_array($x, $xAllowed)) {
-            throw new \InvalidArgumentException('Invalid horizontal alignement value was specified.');
+            throw new \InvalidArgumentException('Invalid horizontal alignment value was specified.');
         }
 
         if (!in_array($y, $yAllowed)) {
-            throw new \InvalidArgumentException('Invalid vertical alignement value was specified.');
+            throw new \InvalidArgumentException('Invalid vertical alignment value was specified.');
         }
 
         $this->alignX = $x;
@@ -150,7 +150,7 @@ class Box
      * Sets textbox position and dimensions
      * @param int $x Distance in pixels from left edge of image.
      * @param int $y Distance in pixels from top edge of image.
-     * @param int $width Width of texbox in pixels.
+     * @param int $width Width of textbox in pixels.
      * @param int $height Height of textbox in pixels.
      */
     public function setBox($x, $y, $width, $height)
@@ -170,36 +170,67 @@ class Box
     }
 
     /**
-     * Draws the text on the picture.
+     * return the lines from a box of text as an array
      * @param string $text Text to draw. May contain newline characters.
+     * @return array
      */
-    public function draw($text)
+    public function getLines($text = '')
     {
-        if (!isset($this->fontFace)) {
-            throw new \InvalidArgumentException('No path to font file has been specified.');
-        }
-
         $lines = array();
         // Split text explicitly into lines by \n, \r\n and \r
         $explicitLines = preg_split('/\n|\r\n?/', $text);
         foreach ($explicitLines as $line) {
             // Check every line if it needs to be wrapped
-            $words = explode(" ", $line);
+            $words = explode(' ', $line);
             $line = $words[0];
-            for ($i = 1; $i < count($words); $i++) {
-                $box = $this->calculateBox($line." ".$words[$i]);
-                if (($box[4]-$box[6]) >= $this->box['width']) {
+            for ($i = 1, $n = count($words); $i < $n; $i++) {
+                $box = $this->calculateBox($line . ' ' . $words[$i]);
+                if (($box[4] - $box[6]) >= $this->box['width']) {
                     $lines[] = $line;
                     $line = $words[$i];
                 } else {
-                    $line .= " ".$words[$i];
+                    $line .= ' ' . $words[$i];
                 }
             }
             $lines[] = $line;
         }
+        return $lines;
+    }
+
+    /**
+     * return the line height
+     * @return int
+     */
+    public function getLineHeightPx()
+    {
+        return $this->lineHeight * $this->fontSize;
+    }
+
+    /**
+     * return the height of a block of text. if the text is not an array we convert it into one
+     * @param string|array $text
+     * @return int
+     */
+    public function getTextHeight($text = '')
+    {
+        if(!is_array($text)) {
+            $text = $this->getLines($text);
+        }
+        return count($text) * $this->getLineHeightPx();
+    }
+
+    /**
+     * Draws the text on the picture.
+     * @param string $text Text to draw. May contain newline characters.
+     */
+    public function draw($text = '')
+    {
+        if (!isset($this->fontFace)) {
+            throw new \InvalidArgumentException('No path to font file has been specified.');
+        }
 
         if ($this->debug) {
-            // Marks whole texbox area with color
+            // Marks whole textbox area with color
             $this->drawFilledRectangle(
                 $this->box['x'],
                 $this->box['y'],
@@ -209,8 +240,9 @@ class Box
             );
         }
 
-        $lineHeightPx = $this->lineHeight * $this->fontSize;
-        $textHeight = count($lines) * $lineHeightPx;
+        $lines = $this->getLines($text);
+        $lineHeightPx = $this->getLineHeightPx();
+        $textHeight = $this->getTextHeight($lines);
         
         switch ($this->alignY) {
             case 'center':
